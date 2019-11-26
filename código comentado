@@ -1,0 +1,404 @@
+#include <iostream>
+#include <cstring>
+#include <fstream>
+#include <vector>//adicionar vetor
+#include <math.h>//arredondar
+#include <algorithm>//função que coloca em ordem sort
+#include <time.h>//rand aleatório
+#include <stdlib.h>//push_back e pop_back,begin(começo)end(fim)
+
+using namespace std;
+
+const int SMAX = 100;
+const int PMAX = 512;
+
+struct Pixel
+{
+    int r;
+    int g;
+    int b;
+};
+struct Img
+{
+    Pixel m[PMAX][PMAX];//matriz da imagem
+    char formato[SMAX];// formato ppm da imagem
+    int largura;
+    int altura;
+    int limite_cor = 255;
+};
+
+
+void salvar_img(Img img,char nome[SMAX]);
+
+void rotaciona(Img entrada, Img& saida);
+
+void solarizar(Img entrada, Img& saida, int limiar);
+
+void abre_img(Img& img,char nome[SMAX]);
+
+void aumenta_tamanho(Img entrada,Img& saida);
+
+void remove_ruido_mediana(Img entrada,Img& saida);
+
+void adiciona_ruido_sal_e_pimenta(Img entrada,Img& saida,int porcentagem);
+
+
+int main()
+{
+    char nome_saida[SMAX];
+    char nome_entrada[SMAX];
+    int limiar = 100;//função solarizar
+    int porcentagem = 25;//função adicionar ruido
+    int n;//numeração da função desejada
+    // Menu do editor
+    cout<<"MENU"<<endl;
+    cout<<"Funcoes:"<<endl;
+    cout<<"(1) Aumentar de tamanho "<<endl;
+    cout<<"(2) Solarizar "<<endl;
+    cout<<"(3) Rotacionar anti-horario "<<endl;
+    cout<<"(4) Retirar ruido"<<endl;
+    cout<<"(5) Adicionar ruido"<<endl;
+    cout<<"OBS:"<<endl;
+    cout<<"Se desejar sair do programa digite em numeracao zero"<<endl;
+    cout<<"Verifique se todos seus aruivos se encontram na mesma pasta"<<endl;
+
+    cout<<"Digite um numero da funcao desejada"<<endl;
+    cin>>n;
+    Img imagem_entrada, imagem_saida;
+
+
+
+    while( n!=0)
+    {
+        if(n<1 ||n>5)// se o numero que o usuario colocar não ser compativel com uma função digite novamente
+        {
+            cout<<"Digito errado"<<endl;
+            cout<<"Digite a numeracao novamente"<<endl;
+            cin>>n;
+        }
+        else if(n==1)
+            {
+                cout << "Insira o nome da imagem (Ex:nome_imagem.ppm): ";//nome da imagem de entrada
+                cin.ignore();
+                cin.getline(nome_entrada, SMAX);
+                abre_img(imagem_entrada, nome_entrada );
+                aumenta_tamanho(imagem_entrada,imagem_saida);
+                cout<<"Insira o nome que deseja salvar o arquivo(Ex:nome_imagem_saida.ppm): ";
+                cin.getline(nome_saida,SMAX);
+                salvar_img(imagem_saida, nome_saida);
+                break;
+            }
+            if(n==2)
+            {
+                cout << "Insira o nome da imagem (Ex:nome_imagem.ppm): ";//nome da imagem de entrada
+                cin.ignore();
+                cin.getline(nome_entrada, SMAX);
+                abre_img(imagem_entrada, nome_entrada );
+                solarizar(imagem_entrada, imagem_saida,limiar);
+                cout<<"Insira o nome que deseja salvar o arquivo (Ex:nome_imagem_saida.ppm): ";
+                cin.getline(nome_saida,SMAX);
+                salvar_img(imagem_saida, nome_saida);
+                break;
+            }
+            if(n==3)
+            {
+                cout << "Insira o nome da imagem (Ex:nome_imagem.ppm): ";//nome da imagem de entrada
+                cin.ignore();
+                cin.getline(nome_entrada, SMAX);
+                abre_img(imagem_entrada, nome_entrada );
+                rotaciona(imagem_entrada, imagem_saida);
+                cout<<"Insira o nome que deseja salvar o arquivo (Ex:nome_imagem_saida.ppm): ";
+                cin.getline(nome_saida,SMAX);
+                salvar_img(imagem_saida, nome_saida);
+                break;
+
+            }
+            if(n==4)
+            {
+                cout << "Insira o nome da imagem (Ex:nome_imagem.ppm): ";//nome da imagem de entrada
+                cin.ignore();
+                cin.getline(nome_entrada, SMAX);
+                abre_img(imagem_entrada, nome_entrada );
+                remove_ruido_mediana(imagem_entrada, imagem_saida);
+                cout<<"Insira o nome que deseja salvar o arquivo (Ex:nome_imagem_saida.ppm): ";
+                cin.getline(nome_saida,SMAX);
+                salvar_img(imagem_saida, nome_saida);
+
+                break;
+            }
+            if(n==5)
+            {
+                cout << "Insira o nome da imagem (Ex:nome_imagem.ppm): ";//nome da imagem de entrada
+                cin.ignore();
+                cin.getline(nome_entrada, SMAX);
+                abre_img(imagem_entrada, nome_entrada );
+                adiciona_ruido_sal_e_pimenta(imagem_entrada,imagem_saida, porcentagem);
+                cout<<"Insira o nome que deseja salvar o arquivo (Ex:nome_imagem_saida.ppm): ";
+                cin.getline(nome_saida,SMAX);
+                salvar_img(imagem_saida, nome_saida);
+
+                break;
+            }
+
+
+    }
+
+    return 0;
+}
+
+void abre_img(Img& img, char nome[SMAX])
+{
+    int RGB;
+    fstream entrada;
+    entrada.open(nome);
+    if(entrada.is_open())
+    {
+
+        entrada >> img.formato;
+        if(strcmp(img.formato,"P3") == 0)//formato p3
+        {
+            cout << "\nImagem carregada com sucesso!" << endl;
+
+            entrada >> img.largura >> img.altura;
+            entrada >> img.limite_cor;
+
+            for(int l=0; l<img.altura; l++)
+            {
+                for(int c=0; c<img.largura; c++)
+                {
+                    entrada >> img.m[l][c].r;
+                    entrada >> img.m[l][c].g;
+                    entrada >> img.m[l][c].b;
+                    if(img.m[l][c].r!=0&&img.m[l][c].g!=0&&img.m[l][c].b!=0)
+                    {
+                        RGB=1;// para testar se está passando as insformações
+                    }
+                    else
+                    {
+                        RGB=0;
+                    }
+
+                }
+
+            }
+        }
+        if(img.largura!=0 &&img.altura!=0&&img.limite_cor!=0&&RGB!=0)
+        {
+            cout<<"Transacao de arquivo completa"<<endl;
+
+
+            entrada.close();
+        }
+        else
+        {
+            cout<<"Formato da imagem errado";
+        }
+
+    }
+    else
+    {
+        cout << "Imagem errada" << endl;
+    }
+}
+
+void salvar_img(Img img,char nome_saida[SMAX])
+{
+
+    ofstream entrada;
+    entrada.open(nome_saida);
+
+    entrada<<img.formato<<endl;
+    entrada<<img.largura<<" "<<img.altura<<endl;
+    entrada<<img.limite_cor<<endl;
+
+
+    for(int i=0; i<img.altura; i++)
+    {
+        for(int j=0; j<img.largura; j++)
+        {
+            entrada<<img.m[i][j].r<<" "<<img.m[i][j].g<<" "<<img.m[i][j].b<<" ";
+        }
+    }
+    cout << "Imagem salva com sucesso!" << endl;
+    cout<<"Formato:"<<" "<<img.formato<<endl;
+    cout<<"Largura:"<<" "<<img.largura<<endl;
+    cout<<"Altura:"<<" "<<img.altura<<endl;
+    cout<<"Limite de cor"<<" "<<img.limite_cor<<endl;
+    entrada.close();
+}
+
+void solarizar(Img entrada, Img& saida, int limiar)
+{
+    strcpy(saida.formato,entrada.formato);
+    saida.altura = entrada.altura;
+    saida.largura = entrada.largura;
+    saida.limite_cor = entrada.limite_cor;
+
+    for(int c=0; c<saida.largura; c++)
+    {
+        for(int l=0; l<saida.altura; l++)
+        {
+            if(entrada.m[l][c].r < limiar)
+            {
+                saida.m[l][c].r = saida.limite_cor - entrada.m[l][c].r;
+            }
+            else
+            {
+                saida.m[l][c].r = entrada.m[l][c].r;
+            }
+            if(entrada.m[l][c].g < limiar)
+            {
+                saida.m[l][c].g = saida.limite_cor - entrada.m[l][c].g;
+            }
+            else
+            {
+                saida.m[l][c].g = entrada.m[l][c].g;
+            }
+            if(entrada.m[l][c].b < limiar)
+            {
+                saida.m[l][c].b = saida.limite_cor - entrada.m[l][c].b;
+            }
+            else
+            {
+                saida.m[l][c].b = entrada.m[l][c].b;
+            }
+        }
+    }
+}
+
+
+void rotaciona(Img entrada, Img& saida)
+{
+    int i, j;
+    strcpy(saida.formato,entrada.formato);
+    saida.largura = entrada.altura;
+    saida.altura = entrada.largura;
+    saida.limite_cor = entrada.limite_cor;
+
+    for(i = 0; i < entrada.altura; i++)
+    {
+        for(j=0; j<entrada.largura; j++)
+        {
+            saida.m[entrada.largura-1-j][i].r= entrada.m[i][j].r;
+            saida.m[entrada.largura-1-j][i].g= entrada.m[i][j].g;
+            saida.m[entrada.largura-1-j][i].b= entrada.m[i][j].b;
+        }
+    }
+}
+
+void aumenta_tamanho(Img entrada,Img& saida)
+{
+
+
+    strcpy(saida.formato,entrada.formato);
+    saida.altura = entrada.altura*2;
+    saida.largura = entrada.largura*2;
+    saida.limite_cor = entrada.limite_cor;
+    for(int i=0; i<entrada.altura; i++)
+    {
+
+        for(int j=0; j<entrada.largura; j++)
+        {
+            saida.m[i*2][j*2].r = entrada.m[i][j].r;
+            saida.m[i*2+1][j*2].r = entrada.m[i][j].r;
+            saida.m[i*2][j*2+1].r = entrada.m[i][j].r;
+            saida.m[i*2+1][j*2+1].r = entrada.m[i][j].r;
+
+            saida.m[i*2][j*2].g = entrada.m[i][j].g;
+            saida.m[i*2+1][j*2].g = entrada.m[i][j].g;
+            saida.m[i*2][j*2+1].g = entrada.m[i][j].g;
+            saida.m[i*2+1][j*2+1].g = entrada.m[i][j].g;
+
+            saida.m[i*2][j*2].b = entrada.m[i][j].b;
+            saida.m[i*2+1][j*2].b = entrada.m[i][j].b;
+            saida.m[i*2][j*2+1].b = entrada.m[i][j].b;
+            saida.m[i*2+1][j*2+1].b = entrada.m[i][j].b;
+
+        }
+
+    }
+}
+
+void remove_ruido_mediana(Img entrada,Img& saida)
+{
+    vector<int> red, green, blue;
+    strcpy(saida.formato,entrada.formato);
+    saida.altura = entrada.altura;
+    saida.largura = entrada.largura;
+    saida.limite_cor = entrada.limite_cor;
+
+    for(int i=0; i<entrada.altura; i++)
+    {
+        for(int j=0; j<entrada.largura; j++)
+        {
+            for(int k=-1; k<2; k++)// vetor 3 pega tres laterais do pixel principal
+            {
+                for(int l=-1; l<2; l++)
+                {
+                    if((i+k)>=0 && (i+k)<entrada.altura && (j+l)>=0 && (j+l)<entrada.largura)//não deixa passar do limite
+                    {
+                        red.push_back(entrada.m[i+k][j+l].r);//preenche o vetor com a vizinhaça e ele mesmo, começa com o tamanho zero e termina com o tamanho da viziança com ele
+                        green.push_back(entrada.m[i+k][j+l].g);
+                        blue.push_back(entrada.m[i+k][j+l].b);
+                    }
+                }
+            }
+            sort(red.begin(), red.end());// organiza em ordem crescente
+            sort(green.begin(), green.end());
+            sort(blue.begin(), blue.end());
+            saida.m[i][j].r = red[round((red.size()-1)/2)];// pega a posição do meio
+            saida.m[i][j].g = green[round((green.size()-1)/2)];//mediana
+            saida.m[i][j].b = blue[round((blue.size()-1)/2)];//equação já que em sempre tem o mesmo tamanho
+            while (!red.empty())//pega o valor princial e troca pela mediana
+
+            {
+                red.pop_back();// esvazia o vetor
+            }
+            while (!green.empty())
+            {
+                green.pop_back();
+            }
+            while (!blue.empty())
+            {
+                blue.pop_back();
+            }
+        }
+    }
+}
+
+void adiciona_ruido_sal_e_pimenta(Img entrada,Img& saida,int porcentagem)
+{
+    int altura_sorteada, largura_sorteada;
+    saida = entrada;
+
+    for(int i=0; i<(porcentagem*entrada.altura*entrada.largura/100); i++)
+    {//quantos pixel foi alterado
+        altura_sorteada = rand() % entrada.altura;//sortear a posiçao
+        largura_sorteada = rand() % entrada.largura;
+
+        if(i<(porcentagem*entrada.altura*entrada.largura/100)/6)
+        {//um terço da metade seja r
+            saida.m[altura_sorteada][largura_sorteada].r = 0;
+        }
+        else if (i<(2*porcentagem*entrada.altura*entrada.largura/100)/6)
+        {
+            saida.m[altura_sorteada][largura_sorteada].g = 0;
+        }
+        else if (i<(3*porcentagem*entrada.altura*entrada.largura/100)/6)
+        {
+            saida.m[altura_sorteada][largura_sorteada].b = 0;
+        }
+        else if (i<(4*porcentagem*entrada.altura*entrada.largura/100)/6)
+        {
+            saida.m[altura_sorteada][largura_sorteada].r = 255;
+        }
+        else if (i<(5*porcentagem*entrada.altura*entrada.largura/100)/6)
+        {
+            saida.m[altura_sorteada][largura_sorteada].g = 255;
+        }
+        else if (i<(6*porcentagem*entrada.altura*entrada.largura/100)/6)
+        {
+            saida.m[altura_sorteada][largura_sorteada].b = 255;
+        }
+    }
+}
